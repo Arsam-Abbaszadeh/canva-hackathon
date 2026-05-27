@@ -7,7 +7,6 @@ import {
   Brain,
   BriefcaseBusiness,
   Check,
-  ChevronRight,
   CircleUserRound,
   Compass,
   GraduationCap,
@@ -26,7 +25,7 @@ const flow = [
   {
     id: 'study',
     question:
-      "Hey, welcome to Monash Compass. Let's explore how an education at Monash could help you build the future you want.\n\nWhat are you hoping to study, and why? If you're not sure yet, tell me your interests instead.",
+      "Hey, welcome to Forge. Let's explore how an education at Monash could help you build the future you want.\n\nWhat are you hoping to study, and why? If you're not sure yet, tell me your interests instead.",
     answer:
       "I want to become a doctor, but I'm also interested in business and entrepreneurship.",
     choices: [
@@ -194,6 +193,7 @@ function App() {
   const [messages, setMessages] = useState(starterMessages)
   const [stepIndex, setStepIndex] = useState(0)
   const [profile, setProfile] = useState({})
+  const [answerDraft, setAnswerDraft] = useState(flow[0].answer)
   const [typing, setTyping] = useState(false)
   const [isFinal, setIsFinal] = useState(false)
   const scrollRef = useRef(null)
@@ -212,10 +212,14 @@ function App() {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [messages, typing, isFinal])
 
-  const chooseAnswer = (answer) => {
+  const sendAnswer = (event) => {
+    event.preventDefault()
     if (!activeStep || typing || isFinal) return
 
     const current = activeStep
+    const currentIndex = stepIndex
+    const answer = answerDraft.trim() || current.answer
+
     setMessages((existing) => [
       ...existing,
       {
@@ -241,7 +245,7 @@ function App() {
 
         if (current.nextQuestion) {
           reply.push({
-            id: `bot-${flow[stepIndex + 1]?.id || 'next'}-question`,
+            id: `bot-${flow[currentIndex + 1]?.id || 'next'}-question`,
             author: 'bot',
             kind: 'question',
             text: current.nextQuestion,
@@ -251,6 +255,7 @@ function App() {
         return reply
       })
       setStepIndex((index) => index + 1)
+      setAnswerDraft(flow[currentIndex + 1]?.answer || '')
       setTyping(false)
     }, 650)
   }
@@ -272,20 +277,21 @@ function App() {
     setMessages(starterMessages)
     setStepIndex(0)
     setProfile({})
+    setAnswerDraft(flow[0].answer)
     setTyping(false)
     setIsFinal(false)
   }
 
   return (
     <main className="app-shell">
-      <section className="left-rail" aria-label="Monash Compass overview">
+      <section className="left-rail" aria-label="Forge overview">
         <div className="brand-block">
           <div className="brand-mark" aria-hidden="true">
             <Compass size={30} />
           </div>
           <div>
-            <p className="eyebrow">Hackathon prototype</p>
-            <h1>Monash Compass</h1>
+            <p className="eyebrow">Student pathway guide</p>
+            <h1>Forge</h1>
           </div>
         </div>
 
@@ -325,14 +331,14 @@ function App() {
         </div>
       </section>
 
-      <section className="chat-panel" aria-label="Scripted chatbot demo">
+      <section className="chat-panel" aria-label="Guided chatbot conversation">
         <header className="chat-header">
           <div>
             <p className="eyebrow">Guided conversation</p>
             <h2>Advice that builds as the student talks</h2>
           </div>
           <button className="ghost-button" type="button" onClick={resetDemo}>
-            Reset demo
+            Reset chat
           </button>
         </header>
 
@@ -359,28 +365,30 @@ function App() {
         </div>
 
         {!isFinal && activeStep && (
-          <div className="composer">
-            <div className="choice-grid" aria-label="Preset demo answers">
-              {activeStep.choices.map((choice) => (
-                <button
-                  className="choice-button"
-                  type="button"
-                  key={choice}
-                  onClick={() => chooseAnswer(choice)}
-                  disabled={typing}
-                >
-                  <span>{choice}</span>
-                  <ChevronRight size={16} />
-                </button>
-              ))}
-            </div>
-            <div className="mock-input" aria-hidden="true">
-              <span>Choose a preset answer to continue the demo</span>
-              <button type="button" tabIndex={-1}>
+          <form className="composer" onSubmit={sendAnswer}>
+            <label className="answer-label" htmlFor="answer-draft">
+              Your answer
+            </label>
+            <div className="chat-input">
+              <textarea
+                id="answer-draft"
+                value={answerDraft}
+                onChange={(event) => setAnswerDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault()
+                    event.currentTarget.form?.requestSubmit()
+                  }
+                }}
+                placeholder="Type your answer..."
+                disabled={typing}
+                rows={2}
+              />
+              <button type="submit" aria-label="Send answer" disabled={typing}>
                 <Send size={17} />
               </button>
             </div>
-          </div>
+          </form>
         )}
 
         {!isFinal && stepIndex >= flow.length && (
@@ -412,7 +420,7 @@ function App() {
             <strong>{isFinal ? 'Strong' : stepIndex > 2 ? 'Emerging' : 'Building'}</strong>
           </div>
           <p>
-            The demo steers from career goals to motivations, lifestyle, identity, fears,
+            The conversation steers from career goals to motivations, lifestyle, identity, fears,
             and aspirations before generating a final recommendation.
           </p>
         </div>
